@@ -12,6 +12,7 @@ class Car {
    v = 0;
    viewAngle = iviewAngle;
    turnAngle = 0;
+   direction = -PI/2;
  }
   
  void move(int throttle) {
@@ -25,6 +26,7 @@ void turn(int iturnAngle) {
  
  void update() {
    direction += turnAngle*v/maxV;
+   direction = direction%(2*PI);
    x += cos(direction)*v;
    y += sin(direction)*v;
    v = min(v+drag, 0) + max(v-drag, 0);
