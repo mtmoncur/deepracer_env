@@ -1,15 +1,28 @@
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.lang.ClassNotFoundException;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+import processing.net.*;
+
+int port = 10002;
+boolean myServerRunning = true;
+Server s;
+//SocketServer s;
+Client c;
+
 PImage track;
-int x,y;
 Car car;
 boolean isUp, isDown, isLeft, isRight;
 boolean recording=false;
 int w = 20000;
 int h = 10000;
+PGraphics pg;
 
-void setup() {
-  frameRate(180);
-  x = 0;
-  y = 0;
+void setup(){
+  //frameRate(30);
   size(1000, 600, P3D);
   track = loadImage("aws-track.png");
   car = new Car(0, 0, PI/3);
@@ -58,7 +71,6 @@ void moveCar() {
 }
 
 void draw() {
-  //color green = color(34, 177, 76);
   color green = color(49, 169, 141);
   background(green);
 
@@ -69,18 +81,19 @@ void draw() {
   car.update();
   
   rotateZ(car.direction);
+  
   image(track, car.y-w/2, car.x-h/2, w, h);
-  
-  translate(-width/2, -height);
-  
-  //if (recording) {
-  //  saveFrame("frames/###.png");
-  //  fill(255,0,0);
-  //} else {
-  //  fill(0,255,0);
-  //}
+  rotateZ(-car.direction);
+  translate(-width/2, -height, 1);
+
+  if (recording) {
+    saveFrame("frames/###.png");
+    fill(255,0,0);
+  } else {
+    fill(0,255,0);
+  }
   if (frameCount%100==0) {
     println(frameRate);
   }
-  //ellipse(width/2, height, 30, 30);
+  ellipse(width/2, height, 30, 30);
 }
