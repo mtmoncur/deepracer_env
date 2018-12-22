@@ -1,6 +1,8 @@
+import os
 import time
 import pygame, OpenGL
 import numpy as np
+import matplotlib.pyplot as plt
 
 from pygame.locals import *
 from OpenGL.GL import *
@@ -13,9 +15,12 @@ from Display import Display
 scl = 9
 width, height = 1000, 600
 
+# os.environ["SDL_VIDEODRIVER"] = "dummy"
+
 def main():
     env = DeepRacerEnv()
-    env.play()
+    env.test()
+    # env.play()
     # env.make(mode='human')
 
 class Car:
@@ -57,13 +62,37 @@ class DeepRacerEnv:
         s.car = Car(0,0, view_angle=-65)
         #initialize display camera
         s.display.rotate_x(s.car.view_angle)
-        s.display.translate(0,-0.83)
+        s.display.translate(0,-0.83) #move the point of rotation to bottom
+
+    def test(s):
+        run = True
+        count = 0
+        start = time.clock()
+        # while run:
+        for _ in range(1000):
+            pygame.time.delay(0)
+            count += 1
+            s.car.throttle(4)
+            s.car.turn(3)
+            s.car.update()
+            run = s.draw()
+            img = s.display.read_screen()
+            if np.random.random() < 0.01:
+                print(img.shape)
+                plt.imshow(img[::-1])
+                plt.show()
+
+            if ((count+1)%100==0):
+                print(f"frameRate: {100/(time.clock() - start)}")
+                start = time.clock()
+        s.quit()
 
     def play(s):
         run = True
         count = 0
         start = time.clock()
         while run:
+        # for _ in range(100000):
             pygame.time.delay(20)
             count += 1
             s.move_car_with_keys()

@@ -2,7 +2,10 @@ import pygame, OpenGL
 from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
+from PIL import Image
 import numpy as np
+import torch
+import matplotlib.pyplot as plt
 
 class Display:
     def __init__(s, fr_height, fr_width, scl, filename):
@@ -13,11 +16,14 @@ class Display:
         s.height = s.img.get_height()
         s.scl = scl
         r = s.width/s.height
-        s.vert = s.scl*np.array([[-r, -1, 0],
-                               [-r,  1, 0],
-                               [ r,  1, 0],
-                               [ r, -1, 0]], dtype=np.float32)
 
+        # 3d coordinates of image
+        s.vert = s.scl*np.array([[-r, -1, 0],
+                                 [-r,  1, 0],
+                                 [ r,  1, 0],
+                                 [ r, -1, 0]], dtype=np.float32)
+
+        #opengl boilerplate code
         s.im = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, s.im)
 
@@ -27,10 +33,10 @@ class Display:
 
         glLoadIdentity()
         gluPerspective(45, s.aspect_ratio, 0.05, 100)
-        s.translate(0,0,-scl/5)
-        # s.draw()
+        s.translate(0,0,-scl/5) #lift the camera slightly
 
     def wall(s):
+        #project the image onto 3d space
         glBegin(GL_QUADS)
         glTexCoord2f(0,0)
         glVertex3f(*s.vert[0])
@@ -43,25 +49,51 @@ class Display:
         glEnd()
 
     def translate_img(s, x, y, z=0):
+        #translate the image, not the camera
         s.vert[:,:2] += np.array([x,y])*s.scl
         if z!=0: s.vert[:,2] += z*s.scl
 
+    def move_img_to(s, x, y, z=0):
+        #specify new image location
+        s.vert[:,:2] = np.array([x,y])*s.scl
+        if z!=0: s.vert[:,2] = z*s.scl
+
     def translate(s, x, y, z=0):
+        #translate the camera
         glTranslatef(x, y, z)
 
     def rotate_x(s, deg):
+        #rotate the camera
         glRotate(deg, 1, 0, 0)
 
     def rotate_y(s, deg):
+        #rotate the camera
         glRotate(deg, 0, 1, 0)
 
     def rotate_z(s, deg):
+        #rotate the camera
         glRotate(deg, 0, 0, 1)
 
     def draw(s):
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
         s.wall()
         pygame.display.flip()
+
+    def read_screen(s):
+        import cupy as cp
+        x, y, width, height = glGetIntegerv(GL_VIEWPORT)
+        # print("Screenshot viewport:", x, y, width, height)
+        glPixelStorei(GL_PACK_ALIGNMENT, 1)
+
+        data = np.empty(width*height*3, dtype=np.uint8)
+        # print(type(width*height*3))
+        # data = cp.empty(int(width*height*3), dtype=cp.uint8)
+        #data = torch.empty(width*height*3, dtype=torch.uint8, device='cuda')
+        glReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, data)
+        # image = np.frombuffer(data, dtype=np.uint8).reshape(height,width,3)
+        # plt.imshow(image)
+        # plt.show()
+        return data.reshape(height, width, 3)
 
 if __name__ == "__main__":
     width, height = 600,600
