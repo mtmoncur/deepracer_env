@@ -18,10 +18,14 @@ class Display:
         r = s.width/s.height
 
         # 3d coordinates of image
-        s.vert = s.scl*np.array([[-r, -1, 0],
-                                 [-r,  1, 0],
-                                 [ r,  1, 0],
-                                 [ r, -1, 0]], dtype=np.float32)
+        #s.vert = s.scl*np.array([[-r, -1, 0],
+        #                         [-r,  1, 0],
+        #                         [ r,  1, 0],
+        #                         [ r, -1, 0]], dtype=np.float32)
+        s.vert = s.scl*np.array([[-width, -height, 0],
+                                 [-width,  height, 0],
+                                 [ width,  height, 0],
+                                 [ width, -height, 0]], dtype=np.float32)
 
         #opengl boilerplate code
         s.im = glGenTextures(1)
@@ -32,8 +36,8 @@ class Display:
         glEnable(GL_TEXTURE_2D)
 
         glLoadIdentity()
-        gluPerspective(45, s.aspect_ratio, 0.05, 100)
-        s.translate(0,0,-scl/5) #lift the camera slightly
+        # gluPerspective(45, s.aspect_ratio, 0.05, 100)
+        s.translate(0,0,-scl*height/5) #lift the camera slightly
 
     def wall(s):
         #project the image onto 3d space
@@ -55,7 +59,11 @@ class Display:
 
     def move_img_to(s, x, y, z=0):
         #specify new image location
-        s.vert[:,:2] = np.array([x,y])*s.scl
+        r = s.width/s.height
+        s.vert[:,:2] = s.scl*np.array([[-r+x, -1+y, 0],
+                                       [-r+x,  1+y, 0],
+                                       [ r+x,  1+y, 0],
+                                       [ r+x, -1+y, 0]], dtype=np.float32)
         if z!=0: s.vert[:,2] = z*s.scl
 
     def translate(s, x, y, z=0):
@@ -93,7 +101,7 @@ class Display:
         # image = np.frombuffer(data, dtype=np.uint8).reshape(height,width,3)
         # plt.imshow(image)
         # plt.show()
-        return data.reshape(height, width, 3)
+        return data.reshape(height, width, 3)[::-1]
 
 if __name__ == "__main__":
     width, height = 600,600
