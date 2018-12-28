@@ -101,7 +101,12 @@ class DeepRacerEnv(gym.Env):
         cur_point = Point(s.car.x, s.car.y)
         cur_track_point = nearest_points(s.track_center, cur_point)[0]
         if s.is_on_track():
-            s.track_dist += cur_track_point.distance(s.prev_track_point)
+            center_point_x = 800/2 # random point insided of track
+            center_point_y = 531/2
+            angle1 = np.arctan2(cur_track_point.x-center_point_x, cur_track_point.y-center_point_y)
+            angle2 = np.arctan2(s.prev_track_point.x-center_point_x, s.prev_track_point.y-center_point_y)
+            if (angle1 < angle2):
+                s.track_dist += cur_track_point.distance(s.prev_track_point)
         s.prev_track_point = cur_track_point
 
         # finalize other values
