@@ -14,18 +14,15 @@ class Display:
         s.aspect_ratio = fr_width/fr_height
         s.width = s.img.get_width()
         s.height = s.img.get_height()
+        s.z_angle = 0
         s.scl = scl
         r = s.width/s.height
 
         # 3d coordinates of image
-#         s.vert = s.scl*np.array([[-r, -1, 0],
-#                                 [-r,  1, 0],
-#                                 [ r,  1, 0],
-#                                 [ r, -1, 0]], dtype=np.float32)
-        s.vert = s.scl*np.array([[-s.width/2, -s.height/2, 0],
-                                 [-s.width/2,  s.height/2, 0],
-                                 [ s.width/2,  s.height/2, 0],
-                                 [ s.width/2, -s.height/2, 0]], dtype=np.float32)
+        s.vert = s.scl*np.array([[0,       0,        0],
+                                 [0,       s.height, 0],
+                                 [s.width, s.height, 0],
+                                 [s.width, 0,        0]], dtype=np.float32)
 
         #opengl boilerplate code
         s.im = glGenTextures(1)
@@ -37,9 +34,9 @@ class Display:
 
         glLoadIdentity()
         gluPerspective(45, s.aspect_ratio, 0.05, 10000)
+        
+        #initial adjustments
         s.translate(0,0,-scl*s.height/10) #lift the camera slightly
-#         gluPerspective(45, s.aspect_ratio, 0.05, 100)
-#         s.translate(0,0,-scl/5) #lift the camera slightly
 
     def wall(s):
         #project the image onto 3d space
@@ -56,17 +53,20 @@ class Display:
 
     def translate_img(s, x, y, z=0):
         #translate the image, not the camera
-        s.vert[:,:2] += np.array([x,y])*s.scl
+        s.vert[:,:2] += np.array([-x,-y])*s.scl
         if z!=0: s.vert[:,2] += z*s.scl
 
     def move_img_to(s, x, y, z=0):
         #specify new image location
-        r = s.width/s.height
-        s.vert[:,:2] = s.scl*np.array([[-s.width+x, -s.height+y, 0],
-                                       [-s.width+x,  s.height+y, 0],
-                                       [ s.width+x,  s.height+y, 0],
-                                       [ s.width+x, -s.height+y, 0]], dtype=np.float32)
-        if z!=0: s.vert[:,2] = z*s.scl
+#         row = s.vert[0].copy()/s.scl
+#         print("before", s.vert[0])
+#         s.translate_img(x+row[0], y+row[1], z+row[2])
+#         print("want", [x,y,z], "after", s.vert[0])
+        s.vert[:,:2] = s.scl*np.array([[-x,          -y,],
+                                       [-x,          s.height-y],
+                                       [s.width-x, s.height-y],
+                                       [s.width-x, -y]], dtype=np.float32)
+        if z!=0: s.vert[:,2] = z
 
     def translate(s, x, y, z=0):
         #translate the camera
@@ -82,7 +82,14 @@ class Display:
 
     def rotate_z(s, deg):
         #rotate the camera
+        s.z_angle += deg
         glRotate(deg, 0, 0, 1)
+
+    def rotate_z_abs(s, deg):
+        #rotate the camera
+        glRotate(-s.z_angle, 0, 0, 1)
+        glRotate(deg, 0, 0, 1)
+        s.z_angle = deg
 
     def draw(s):
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
