@@ -12,7 +12,7 @@ This repository contains a simulator for AWS Deep Racer. At this point all of th
 
 ![](gifs/25.gif)
 
-```
+```python
 import gym
 import gym_deepracer
 import time
