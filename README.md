@@ -6,11 +6,11 @@ This repository contains a simulator for AWS Deep Racer. At this point all of th
 
 Random Initialization (0 epochs)
 
-![]{gifs/0.gifs)
+![](gifs/0.gifs)
 
 15 epochs
 
-![]{gifs/15.gifs)
+![](gifs/15.gifs)
 
 
 ```import gym
