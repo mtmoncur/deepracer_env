@@ -4,16 +4,16 @@ This repository contains a simulator for AWS Deep Racer. At this point all of th
 
 ### Training with PPO
 
-Random Initialization (0 epochs)
+0 epochs
 
 ![](gifs/0.gifs)
 
-15 epochs
+25 epochs
 
-![](gifs/15.gifs)
+![](gifs/25.gifs)
 
-
-```import gym
+```
+import gym
 import gym_deepracer
 import time
 

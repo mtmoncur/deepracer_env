@@ -67,19 +67,13 @@ class DeepRacerEnv(gym.Env):
     
     def __init__(s, width=1000, height=600, scl = 1):
         super().__init__()
-#         s.mirror = False if np.random.rand() < 0.5 else True
-#         if s.mirror:
-#             s.default_car = Car(187,453, view_angle=-65)
-#         else:
         s.default_car = Car(187,531-453, view_angle=-65)
-            
+
         #get track shape
         pts_arr = np.load(os.path.join(path,"track_points.npy"))
-#         if s.mirror:
-#             pts_arr[:,1] = 531 - pts_arr[:,1]
         s.track_center = LinearRing(pts_arr)
         s.track_shape = s.track_center.buffer(39) # track is about 39 pixels wide
-        
+
         # create display
         s.resize(width, height, scl)
 
@@ -87,7 +81,7 @@ class DeepRacerEnv(gym.Env):
         s.time = 0 # time measured in frames
         s.driving_dist = 0  # true driving distance
         s.track_dist = 0    # only incremented while on track
-        
+
     def random_car(s):
         while True:
                 x = np.random.uniform(0,s.display.width)
@@ -105,7 +99,7 @@ class DeepRacerEnv(gym.Env):
                         direction += np.pi
                     new_car = Car(x, y, default_angle, direction)
                     return new_car
-                    
+
     def resize(s, width, height, scl=1, random=True):
         if hasattr(s, 'win'): s.quit()
         pygame.init()
@@ -123,7 +117,7 @@ class DeepRacerEnv(gym.Env):
         s.display.translate(0,-0.15*height)
         s.display.rotate_z_abs(init_dir) #point the camera forward
         s.display.draw()
-        
+
     def get_angle(s, x1, y1, x2, y2):
         center_point_x = 800/2 # random point insided of track
         center_point_y = 531/2
@@ -159,14 +153,15 @@ class DeepRacerEnv(gym.Env):
         s.prev_track_point = cur_track_point
 
         # finalize other values
-        reward = delta_track_dist#1.0 if s.is_on_track() else 0.0 #1.0 #implement your own reward system here
+        reward = delta_track_dist
+#         reward = 1.0 if s.is_on_track() else 0.0
         state = [s.camera_view][0] # true system includes camera, gyroscope,and accelerometer
-        done = ((not is_display_alive) or (s.distance_to_centerline() > 50)) #or not s.is_on_track() # implement your own logic on when to be done
+        done = ((not is_display_alive) or (s.distance_to_centerline() > 80)) #or not s.is_on_track() # implement your own logic on when to be done
 
         return state, reward, done, {}
 
     def reset(s, random=True):
-        """Set everything back and return obs."""
+        """Set everything back and return observation."""
 #         prev_dir = 
         if random:
             s.car = s.random_car()
@@ -176,7 +171,6 @@ class DeepRacerEnv(gym.Env):
             delattr(s, 'prev_track_point')
         is_display_alive = s.draw()
         s.camera_view = s.display.read_screen()
-
         state = [s.camera_view][0]
 
         return state
@@ -235,25 +229,20 @@ class DeepRacerEnv(gym.Env):
             if event.type == pygame.QUIT:
                 return False
 
-        # Explanation
+        # Full Drawing Explanation
         # When created in __init__, the camera is raised and tilted so we are not looking straight at the ground
         # First move the image to simulate motion, (we leave the camera at the origin for rotation reasons)
         # Second rotate the camera to simulate turning
-#         s.display.translate_img(s.car.dx, s.car.dy)
         s.display.move_img_to(s.car.x, s.car.y)
-#         s.display.rotate_z(np.rad2deg(-s.car.ddirection))
         s.display.rotate_z_abs(np.rad2deg(-s.car.direction))
         s.display.draw()
         return True
 
     def is_on_track(s):
-        # negatives since we move the image instead of the camera
-#         pos = Point((-s.car.y,-s.car.x))
         pos = Point((s.car.x,s.car.y))
         return s.track_shape.contains(pos)
 
     def distance_to_centerline(s):
-        # negatives since we move the image instead of the camera
         pos = Point((s.car.x,s.car.y))
         return s.track_center.distance(pos)
 

@@ -4,7 +4,6 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from PIL import Image
 import numpy as np
-import torch
 import matplotlib.pyplot as plt
 
 class Display:
@@ -58,10 +57,6 @@ class Display:
 
     def move_img_to(s, x, y, z=0):
         #specify new image location
-#         row = s.vert[0].copy()/s.scl
-#         print("before", s.vert[0])
-#         s.translate_img(x+row[0], y+row[1], z+row[2])
-#         print("want", [x,y,z], "after", s.vert[0])
         s.vert[:,:2] = s.scl*np.array([[-x,        -y,],
                                        [-x,        s.height-y],
                                        [s.width-x, s.height-y],
@@ -99,20 +94,12 @@ class Display:
     def read_screen(s):
         import cupy as cp
         x, y, width, height = glGetIntegerv(GL_VIEWPORT)
-        # print("Screenshot viewport:", x, y, width, height)
         glPixelStorei(GL_PACK_ALIGNMENT, 1)
-
         data = np.empty(width*height*3, dtype=np.uint8)
-        # print(type(width*height*3))
-        # data = cp.empty(int(width*height*3), dtype=cp.uint8)
-        #data = torch.empty(width*height*3, dtype=torch.uint8, device='cuda')
         glReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, data)
-        # image = np.frombuffer(data, dtype=np.uint8).reshape(height,width,3)
-        # plt.imshow(image)
-        # plt.show()
         return data.reshape(height, width, 3)[::-1].copy()
 
 if __name__ == "__main__":
-    width, height = 600,600
+    width, height = 1000,600
     pygame.init()
     pygame.display.set_mode((width,height), DOUBLEBUF|OPENGL)
