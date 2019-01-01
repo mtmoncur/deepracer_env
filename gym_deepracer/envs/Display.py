@@ -1,8 +1,7 @@
-import pygame, OpenGL
+import pygame
 from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
-from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -15,7 +14,6 @@ class Display:
         s.height = s.img.get_height()
         s.z_angle = 0
         s.scl = scl
-        r = s.width/s.height
 
         # 3d coordinates of image
         s.vert = s.scl*np.array([[0,       0,        0],

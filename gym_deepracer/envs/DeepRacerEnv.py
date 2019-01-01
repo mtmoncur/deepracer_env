@@ -1,7 +1,7 @@
 import os
 import time
 from copy import copy
-import pygame, OpenGL
+import pygame
 import numpy as np
 import matplotlib.pyplot as plt
 from shapely.geometry import LinearRing,Point

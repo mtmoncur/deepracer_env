@@ -23,7 +23,7 @@ env.resize(128,128,random=False) # resize to 128x128 for learning
 camera_view = env.reset()
 for _ in range(1000):
     throttle = 3
-    turn = 1 # drive in a circle
+    turn = 2 # drive in a circle
     action = (throttle, turn)
     camera_view, reward, done, _ = env.step(action)
     time.sleep(1/30) # run at 30fps
