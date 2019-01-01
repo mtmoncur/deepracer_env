@@ -6,11 +6,11 @@ This repository contains a simulator for AWS Deep Racer. At this point all of th
 
 0 epochs
 
-![](gifs/0.gifs)
+![Trial from Random Initialization](https://github.com/mtmoncur/deepracer_env/gifs/0.gifs)
 
 25 epochs
 
-![](gifs/25.gifs)
+![Trial from epcoh 25](https://github.com/mtmoncur/deepracer_env/gifs/25.gifs)
 
 ```
 import gym
