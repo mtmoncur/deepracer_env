@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 class Display:
     def __init__(s, fr_height, fr_width, scl, filename):
-        s.img = pygame.image.load('aws-track.png')
+        s.img = pygame.image.load(filename)
         s.textureData = pygame.image.tostring(s.img, "RGB", 1)
         s.aspect_ratio = fr_width/fr_height
         s.width = s.img.get_width()
@@ -62,11 +62,11 @@ class Display:
 #         print("before", s.vert[0])
 #         s.translate_img(x+row[0], y+row[1], z+row[2])
 #         print("want", [x,y,z], "after", s.vert[0])
-        s.vert[:,:2] = s.scl*np.array([[-x,          -y,],
-                                       [-x,          s.height-y],
+        s.vert[:,:2] = s.scl*np.array([[-x,        -y,],
+                                       [-x,        s.height-y],
                                        [s.width-x, s.height-y],
                                        [s.width-x, -y]], dtype=np.float32)
-        if z!=0: s.vert[:,2] = z
+        if z!=0: s.vert[:,2] = z*s.scl
 
     def translate(s, x, y, z=0):
         #translate the camera
@@ -76,19 +76,19 @@ class Display:
         #rotate the camera
         glRotate(deg, 1, 0, 0)
 
-    def rotate_y(s, deg):
-        #rotate the camera
-        glRotate(deg, 0, 1, 0)
+#     def rotate_y(s, deg):
+#         #rotate the camera
+#         glRotate(deg, 0, 1, 0)
 
-    def rotate_z(s, deg):
-        #rotate the camera
-        s.z_angle += deg
-        glRotate(deg, 0, 0, 1)
+#     def rotate_z(s, deg):
+#         #rotate the camera
+#         s.z_angle += deg
+#         glRotate(deg, 0, 0, 1)
 
     def rotate_z_abs(s, deg):
         #rotate the camera
-        glRotate(-s.z_angle, 0, 0, 1)
-        glRotate(deg, 0, 0, 1)
+        deg += 90 # plus 90 because ...
+        glRotate(deg-s.z_angle, 0, 0, 1)
         s.z_angle = deg
 
     def draw(s):
@@ -110,7 +110,7 @@ class Display:
         # image = np.frombuffer(data, dtype=np.uint8).reshape(height,width,3)
         # plt.imshow(image)
         # plt.show()
-        return data.reshape(height, width, 3)[::-1]
+        return data.reshape(height, width, 3)[::-1].copy()
 
 if __name__ == "__main__":
     width, height = 600,600
