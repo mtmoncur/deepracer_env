@@ -92,7 +92,6 @@ class Display:
         pygame.display.flip()
 
     def read_screen(s):
-        import cupy as cp
         x, y, width, height = glGetIntegerv(GL_VIEWPORT)
         glPixelStorei(GL_PACK_ALIGNMENT, 1)
         data = np.empty(width*height*3, dtype=np.uint8)
