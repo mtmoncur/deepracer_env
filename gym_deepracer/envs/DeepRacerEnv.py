@@ -1,11 +1,15 @@
 import os
 import time
 from copy import copy
+from itertools import combinations
+
 import pygame
 import numpy as np
 import matplotlib.pyplot as plt
-from shapely.geometry import LinearRing,Point
+from shapely.geometry import Polygon,LinearRing,Point
 from shapely.ops import nearest_points
+from imageio import imread
+import skimage
 import gym
 
 from pygame.locals import *
@@ -13,6 +17,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 from gym_deepracer.envs.Display import Display
+from gym_deepracer.envs.Car import Car
 
 path = os.path.dirname(os.path.abspath(__file__))
 
@@ -23,58 +28,23 @@ def main():
     env.test()
     # env.play()
 
-class Car:
-    """
-    This Class models the movements and relevant information of the DeepRacer car.
-    You are not meant to interact directly with objects of this type, but rather it is
-    used by the DeepRacerEnv
-    """
-    def __init__(s, x, y, view_angle, direction=0):
-        s.x = x
-        s.y = y
-        s.view_angle = view_angle
-        s.v = 0
-        s.max_v = 5
-        s.drag = 0.6
-        s.direction = direction
-        s.turn_angle = 0
-        
-        s.ddirection = s.direction
-        s.dx = x
-        s.dy = y
-
-    def throttle(s, throttle):
-        s.v += throttle
-        s.v = max(min(s.v,s.max_v), -s.max_v)
-
-    def turn(s, turn_angle):
-        s.turn_angle += np.deg2rad(turn_angle)
-
-    def update(s):
-        s.ddirection = s.turn_angle * s.v/s.max_v
-        s.direction += s.ddirection
-
-        s.dx = np.cos(s.direction) * s.v
-        s.dy = np.sin(s.direction) * s.v
-        s.x += s.dx
-        s.y += s.dy
-
-        s.v = min(s.v+s.drag,0) + max(s.v-s.drag, 0)
-        s.turn_angle = 0
-
 class DeepRacerEnv(gym.Env):
     metadata = {'render.modes':['human']}
     
     def __init__(s, width=1000, height=600, scl = 1):
         super().__init__()
         s.default_car = Car(187,531-453, view_angle=-65)
+        s.width = width
+        s.height= height
 
         #get track shape
         pts_arr = np.load(os.path.join(path,"track_points.npy"))
         s.track_center = LinearRing(pts_arr)
+        s.track_cut = Polygon(pts_arr)
         s.track_shape = s.track_center.buffer(39) # track is about 39 pixels wide
 
         # create display
+        s.track_img = imread(os.path.join(path,"aws-track2.png"))
         s.resize(width, height, scl)
 
         #only used for RL, not in human mode
@@ -84,28 +54,64 @@ class DeepRacerEnv(gym.Env):
 
     def random_car(s):
         while True:
-                x = np.random.uniform(0,s.display.width)
-                y = np.random.uniform(0,s.display.height)
-                pt = Point(x,y)
-                if s.track_center.distance(pt) < 20:
-                    default_angle = s.default_car.view_angle
-                    #now find the direction
-                    pt1 = nearest_points(s.track_center, pt)[0]
-                    pt2 = nearest_points(s.track_center, Point(x+0.03, y+0.03))[0]
-                    direction = np.arctan2(pt2.y-pt1.y, pt2.x-pt1.x)
-#                     print("rand", x, y, direction)
-#                     if np.sign(s.get_angle(pt2.x,pt2.y,pt1.x,pt1.y)) < 0:
-                    if np.random.rand() < 0.5:
-                        direction += np.pi
-                    new_car = Car(x, y, default_angle, direction)
-                    return new_car
+            x = np.random.uniform(0,s.display.width)
+            y = np.random.uniform(0,s.display.height)
+            pt = Point(x,y)
+            if s.track_center.distance(pt) < 20:
+                default_angle = s.default_car.view_angle
+                #now find the direction
+                pt1 = nearest_points(s.track_center, pt)[0]
+                pt2 = nearest_points(s.track_center, Point(x+0.03, y+0.03))[0]
+                direction = np.arctan2(pt2.y-pt1.y, pt2.x-pt1.x)
+                # commented out to allow forwards and backwards
+                # if np.sign(s.get_angle(pt2.x,pt2.y,pt1.x,pt1.y)) < 0:
+                if np.random.rand() < 0.5:
+                    direction += np.pi
+                new_car = Car(x, y, default_angle, direction)
+                return new_car
 
-    def resize(s, width, height, scl=1, random=True):
+    def random_colors(s, size):
+        while True:
+            new_colors = np.random.randint(0,256,(size,3))
+            color_list = list(new_colors)
+            for c1,c2 in combinations(color_list, r=2):
+                if np.linalg.norm(c1.astype(np.float32)-c2) < 120:
+                    break
+            else:
+                return new_colors
+
+    def randomize_track(s):
+        norm = np.linalg.norm
+        if np.random.rand() < 0.1:
+            colors = np.array([[49,169,141],[47,61,69],[255,255,255],[238, 163,  85]])
+            img_r = s.track_img.copy()
+            new_colors = s.random_colors(4)#np.random.randint(0,256,(3,3))
+            img_r[norm(s.track_img.astype(np.float32) - colors[0], axis=2) < 80] = new_colors[0]
+            img_r[norm(s.track_img.astype(np.float32) - colors[1], axis=2) < 80] = new_colors[1]
+            img_r[norm(s.track_img.astype(np.float32) - colors[2], axis=2) < 80] = new_colors[2]
+            img_r[norm(s.track_img.astype(np.float32) - colors[3], axis=2) < 80] = new_colors[3]
+
+            new_track_img = (255*skimage.util.random_noise(img_r, mode='poisson')).astype(np.uint8)
+#             print("Randomized")
+            s.resize(s.width, s.height, img=new_track_img)
+        elif np.random.rand() < 0.2:
+#             print("Original")
+            s.resize(s.width, s.height)
+        else:
+#             print("No Change")
+            pass
+
+    def resize(s, width, height, scl=1, random=True, img=None):
+        s.width = width
+        s.height = height
         if hasattr(s, 'win'): s.quit()
         pygame.init()
         s.win = pygame.display.set_mode((width, height), DOUBLEBUF|OPENGL)
         pygame.display.set_caption("Deep Racer")
-        s.display = Display(fr_height=height, fr_width=width, scl=scl, filename=os.path.join(path,'aws-track.png'))
+        if img is not None:
+            s.display = Display(fr_height=height, fr_width=width, scl=scl, img=img)
+        else:
+            s.display = Display(fr_height=height, fr_width=width, scl=scl, img=s.track_img)
         if random:
             s.car = s.random_car()
         else:
@@ -117,6 +123,8 @@ class DeepRacerEnv(gym.Env):
         s.display.translate(0,-0.15*height)
         s.display.rotate_z_abs(init_dir) #point the camera forward
         s.display.draw()
+
+        s.time = 0
 
     def get_angle(s, x1, y1, x2, y2):
         center_point_x = 800/2 # random point insided of track
@@ -153,25 +161,26 @@ class DeepRacerEnv(gym.Env):
         s.prev_track_point = cur_track_point
 
         # finalize other values
-        reward = delta_track_dist
-#         reward = 1.0 if s.is_on_track() else 0.0
-        state = [s.camera_view][0] # true system includes camera, gyroscope,and accelerometer
-        done = ((not is_display_alive) or (s.distance_to_centerline() > 80)) #or not s.is_on_track() # implement your own logic on when to be done
+#         reward = delta_track_dist/s.car.max_v
+        reward = 1.0 if s.is_on_track() else 0.0
+        state = [s.camera_view.astype(np.float32)/255, np.array([s.time/100])] # true system includes camera, gyroscope,and accelerometer
+        done = ((not is_display_alive) or (abs(s.distance_to_centerline()) > 80)) #implement your own logic on when to be done
 
         return state, reward, done, {}
 
     def reset(s, random=True):
         """Set everything back and return observation."""
-#         prev_dir = 
+        s.time = 0
         if random:
             s.car = s.random_car()
+            s.randomize_track()
         else:
             s.car = copy(s.default_car)
         if hasattr(s, 'prev_track_point'):
             delattr(s, 'prev_track_point')
         is_display_alive = s.draw()
         s.camera_view = s.display.read_screen()
-        state = [s.camera_view][0]
+        state = [s.camera_view.astype(np.float32)/255, np.array([s.time/100])]
 
         return state
 
@@ -216,6 +225,7 @@ class DeepRacerEnv(gym.Env):
             run = s.draw()
 
             if ((count+1)%100==0):
+                if s.is_on_track(): print("===On track===")
                 print(f"frameRate: {100/(time.clock() - start)}")
                 start = time.clock()
         s.quit()
@@ -244,7 +254,8 @@ class DeepRacerEnv(gym.Env):
 
     def distance_to_centerline(s):
         pos = Point((s.car.x,s.car.y))
-        return s.track_center.distance(pos)
+        sign = -1 if s.track_cut.contains(pos) else 1
+        return sign*s.track_center.distance(pos)
 
     def move_car(s, throttle, turn):
         """RL mode to move car."""
@@ -259,9 +270,9 @@ class DeepRacerEnv(gym.Env):
         keys = pygame.key.get_pressed()
 
         if keys[pygame.K_LEFT]:
-            s.car.turn(1.5)
+            s.car.turn(2.5)
         if keys[pygame.K_RIGHT]:
-            s.car.turn(-1.5)
+            s.car.turn(-2.5)
         if keys[pygame.K_UP]:
             s.car.throttle(3)
         if keys[pygame.K_DOWN]:

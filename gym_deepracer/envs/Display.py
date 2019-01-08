@@ -6,8 +6,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class Display:
-    def __init__(s, fr_height, fr_width, scl, filename):
-        s.img = pygame.image.load(filename)
+    def __init__(s, fr_height, fr_width, scl, filename=None, img=None):
+        if filename is not None:
+            s.img = pygame.image.load(filename)
+        else:
+            s.img = pygame.surfarray.make_surface(np.swapaxes(img,0,1))
         s.textureData = pygame.image.tostring(s.img, "RGB", 1)
         s.aspect_ratio = fr_width/fr_height
         s.width = s.img.get_width()
@@ -35,6 +38,15 @@ class Display:
         #initial adjustments
         s.translate(0,0,-scl*s.height/10) #lift the camera slightly
 
+        
+#     def new_track(s, numpy_img):
+#         surface_img = pygame.surfarray.make_surface(numpy_img)
+#         textureData = pygame.image.tostring(surface_img, "RGB", 1)
+#         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, s.width, s.height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData)
+        
+#     def reset_track(s):
+#         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, s.width, s.height, 0, GL_RGB, GL_UNSIGNED_BYTE, s.textureData)
+        
     def wall(s):
         #project the image onto 3d space
         glBegin(GL_QUADS)
