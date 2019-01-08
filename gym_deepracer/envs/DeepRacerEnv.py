@@ -31,7 +31,7 @@ def main():
 class DeepRacerEnv(gym.Env):
     metadata = {'render.modes':['human']}
     
-    def __init__(s, width=1000, height=600, scl = 1):
+    def __init__(s, width=1000, height=600):
         super().__init__()
         s.default_car = Car(187,531-453, view_angle=-65)
         s.width = width
@@ -45,7 +45,7 @@ class DeepRacerEnv(gym.Env):
 
         # create display
         s.track_img = imread(os.path.join(path,"aws-track2.png"))
-        s.resize(width, height, scl)
+        s.resize(width, height)
 
         #only used for RL, not in human mode
         s.time = 0 # time measured in frames
@@ -101,7 +101,7 @@ class DeepRacerEnv(gym.Env):
 #             print("No Change")
             pass
 
-    def resize(s, width, height, scl=1, random=True, img=None):
+    def resize(s, width, height, random=False, img=None):
         s.width = width
         s.height = height
         if hasattr(s, 'win'): s.quit()
@@ -109,9 +109,9 @@ class DeepRacerEnv(gym.Env):
         s.win = pygame.display.set_mode((width, height), DOUBLEBUF|OPENGL)
         pygame.display.set_caption("Deep Racer")
         if img is not None:
-            s.display = Display(fr_height=height, fr_width=width, scl=scl, img=img)
+            s.display = Display(fr_height=height, fr_width=width, img=img)
         else:
-            s.display = Display(fr_height=height, fr_width=width, scl=scl, img=s.track_img)
+            s.display = Display(fr_height=height, fr_width=width, img=s.track_img)
         if random:
             s.car = s.random_car()
         else:
@@ -168,7 +168,7 @@ class DeepRacerEnv(gym.Env):
 
         return state, reward, done, {}
 
-    def reset(s, random=True):
+    def reset(s, random=False):
         """Set everything back and return observation."""
         s.time = 0
         if random:

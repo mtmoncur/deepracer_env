@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class Display:
-    def __init__(s, fr_height, fr_width, scl, filename=None, img=None):
+    def __init__(s, fr_height, fr_width, filename=None, img=None):
         if filename is not None:
             s.img = pygame.image.load(filename)
         else:
@@ -16,13 +16,12 @@ class Display:
         s.width = s.img.get_width()
         s.height = s.img.get_height()
         s.z_angle = 0
-        s.scl = scl
 
         # 3d coordinates of image
-        s.vert = s.scl*np.array([[0,       0,        0],
-                                 [0,       s.height, 0],
-                                 [s.width, s.height, 0],
-                                 [s.width, 0,        0]], dtype=np.float32)
+        s.vert = np.array([[0,       0,        0],
+                           [0,       s.height, 0],
+                           [s.width, s.height, 0],
+                           [s.width, 0,        0]], dtype=np.float32)
 
         #opengl boilerplate code
         s.im = glGenTextures(1)
@@ -36,7 +35,7 @@ class Display:
         gluPerspective(45, s.aspect_ratio, 0.05, 10000)
         
         #initial adjustments
-        s.translate(0,0,-scl*s.height/10) #lift the camera slightly
+        s.translate(0,0,-s.height/10) #lift the camera slightly
 
         
 #     def new_track(s, numpy_img):
@@ -62,16 +61,16 @@ class Display:
 
     def translate_img(s, x, y, z=0):
         #translate the image, not the camera
-        s.vert[:,:2] += np.array([-x,-y])*s.scl
-        if z!=0: s.vert[:,2] += z*s.scl
+        s.vert[:,:2] += np.array([-x,-y])
+        if z!=0: s.vert[:,2] += z
 
     def move_img_to(s, x, y, z=0):
         #specify new image location
-        s.vert[:,:2] = s.scl*np.array([[-x,        -y,],
-                                       [-x,        s.height-y],
-                                       [s.width-x, s.height-y],
-                                       [s.width-x, -y]], dtype=np.float32)
-        if z!=0: s.vert[:,2] = z*s.scl
+        s.vert[:,:2] = np.array([[-x,        -y,],
+                                 [-x,        s.height-y],
+                                 [s.width-x, s.height-y],
+                                 [s.width-x, -y]], dtype=np.float32)
+        if z!=0: s.vert[:,2] = z
 
     def translate(s, x, y, z=0):
         #translate the camera

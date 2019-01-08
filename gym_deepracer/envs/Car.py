@@ -6,7 +6,7 @@ class Car:
     You are not meant to interact directly with objects of this type, but rather it is
     used by the DeepRacerEnv
     """
-    def __init__(s, x, y, view_angle, direction=0, random=True, biased=False):
+    def __init__(s, x, y, view_angle, direction=0, random=False, biased=False):
         s.x = x
         s.y = y
         s.view_angle = view_angle
@@ -21,14 +21,14 @@ class Car:
         
         if biased:
             s.v_bias = np.clip(np.random.rand()/10, -0.5, 0.5)
-            s.t_angle_bias = np.clip(np.random.rand(), -1.5, 1.5)
+            s.t_angle_bias = np.clip(np.random.rand(), -0.5, 0.5)
         else:
             s.v_bias = 0
             s.t_angle_bias = 0
 
         if random:
-            s.v_stddev = 1/8     # track pixel, not screen pixel
-            s.t_angle_stddev = 1/2 # degrees
+            s.v_stddev = 1/8       # track pixel, not screen pixel
+            s.t_angle_stddev = 1/8 # degrees
         else:
             s.v_stddev = 0
             s.t_angle_stddev = 0
