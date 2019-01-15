@@ -33,6 +33,7 @@ class DeepRacerEnv(gym.Env):
     
     def __init__(s, width=1000, height=600):
         super().__init__()
+        s.random = False
         s.default_car = Car(187,531-453, view_angle=-65)
         s.width = width
         s.height= height
@@ -48,7 +49,7 @@ class DeepRacerEnv(gym.Env):
         s.resize(width, height)
 
         #only used for RL, not in human mode
-        s.time = 0 # time measured in frames
+        s.time = 0          # time measured in frames
         s.driving_dist = 0  # true driving distance
         s.track_dist = 0    # only incremented while on track
 
@@ -85,23 +86,23 @@ class DeepRacerEnv(gym.Env):
         if np.random.rand() < 0.1:
             colors = np.array([[49,169,141],[47,61,69],[255,255,255],[238, 163,  85]])
             img_r = s.track_img.copy()
-            new_colors = s.random_colors(4)#np.random.randint(0,256,(3,3))
+            new_colors = s.random_colors(4)
             img_r[norm(s.track_img.astype(np.float32) - colors[0], axis=2) < 80] = new_colors[0]
             img_r[norm(s.track_img.astype(np.float32) - colors[1], axis=2) < 80] = new_colors[1]
             img_r[norm(s.track_img.astype(np.float32) - colors[2], axis=2) < 80] = new_colors[2]
             img_r[norm(s.track_img.astype(np.float32) - colors[3], axis=2) < 80] = new_colors[3]
 
             new_track_img = (255*skimage.util.random_noise(img_r, mode='poisson')).astype(np.uint8)
-#             print("Randomized")
-            s.resize(s.width, s.height, img=new_track_img)
+            s.display.new_track(new_track_img)
         elif np.random.rand() < 0.2:
-#             print("Original")
-            s.resize(s.width, s.height)
+            s.display.new_track(s.track_img)
         else:
-#             print("No Change")
             pass
 
-    def resize(s, width, height, random=False, img=None):
+    def set_random(s, mode):
+        s.random = mode
+
+    def resize(s, width, height, img=None):
         s.width = width
         s.height = height
         if hasattr(s, 'win'): s.quit()
@@ -112,7 +113,7 @@ class DeepRacerEnv(gym.Env):
             s.display = Display(fr_height=height, fr_width=width, img=img)
         else:
             s.display = Display(fr_height=height, fr_width=width, img=s.track_img)
-        if random:
+        if s.random:
             s.car = s.random_car()
         else:
             s.car = copy(s.default_car)
@@ -120,7 +121,7 @@ class DeepRacerEnv(gym.Env):
         #initialize display camera
         init_dir = np.rad2deg(s.car.direction)
         s.display.rotate_x(s.car.view_angle)
-        s.display.translate(0,-0.15*height)
+        s.display.translate(0,-0.05*height)
         s.display.rotate_z_abs(init_dir) #point the camera forward
         s.display.draw()
 
@@ -135,11 +136,7 @@ class DeepRacerEnv(gym.Env):
 
     def step(s, action):
         """Apply action, return new state, reward, done, empty info dict"""
-        if hasattr(action, '__getitem__'):
-            throttle, turn = action
-        else:
-            turn = action - 3
-            throttle = 3
+        throttle, turn = action
         s.move_car(throttle, turn)
         is_display_alive = s.draw()
         s.camera_view = s.display.read_screen()
@@ -168,10 +165,10 @@ class DeepRacerEnv(gym.Env):
 
         return state, reward, done, {}
 
-    def reset(s, random=False):
+    def reset(s):
         """Set everything back and return observation."""
         s.time = 0
-        if random:
+        if s.random:
             s.car = s.random_car()
             s.randomize_track()
         else:
@@ -274,9 +271,9 @@ class DeepRacerEnv(gym.Env):
         if keys[pygame.K_RIGHT]:
             s.car.turn(-2.5)
         if keys[pygame.K_UP]:
-            s.car.throttle(3)
+            s.car.throttle(1.5)
         if keys[pygame.K_DOWN]:
-            s.car.throttle(-3)
+            s.car.throttle(-1.5)
         s.car.update()
 
 if __name__ == "__main__":
