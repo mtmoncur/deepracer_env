@@ -34,9 +34,8 @@ class DeepRacerEnv(gym.Env):
     def __init__(s, width=1000, height=600):
         super().__init__()
         s.random = False
-        s.default_car = Car(187,531-453, view_angle=-65)
-        s.width = width
-        s.height= height
+        s._fps = 25
+        s.default_car = Car(187,531-453, fps=s._fps, view_angle=-65)
 
         #get track shape
         pts_arr = np.load(os.path.join(path,"track_points.npy"))
@@ -68,7 +67,7 @@ class DeepRacerEnv(gym.Env):
                 # if np.sign(s.get_angle(pt2.x,pt2.y,pt1.x,pt1.y)) < 0:
                 if np.random.rand() < 0.5:
                     direction += np.pi
-                new_car = Car(x, y, default_angle, direction)
+                new_car = Car(x, y, default_angle, s._fps, direction)
                 return new_car
 
     def random_colors(s, size):
@@ -103,8 +102,6 @@ class DeepRacerEnv(gym.Env):
         s.random = mode
 
     def resize(s, width, height, img=None):
-        s.width = width
-        s.height = height
         if hasattr(s, 'win'): s.quit()
         pygame.init()
         s.win = pygame.display.set_mode((width, height), DOUBLEBUF|OPENGL)
@@ -215,7 +212,10 @@ class DeepRacerEnv(gym.Env):
         run = True
         count = 0
         start = time.clock()
-        while run:
+        v = []
+#         while run:
+        for _ in range(800):
+            v.append(s.car.v)
             pygame.time.delay(20)
             count += 1
             s.move_car_with_keys()
@@ -226,6 +226,8 @@ class DeepRacerEnv(gym.Env):
                 print(f"frameRate: {100/(time.clock() - start)}")
                 start = time.clock()
         s.quit()
+        plt.plot(v)
+        plt.show()
 
     def quit(s):
         pygame.quit()
@@ -267,13 +269,13 @@ class DeepRacerEnv(gym.Env):
         keys = pygame.key.get_pressed()
 
         if keys[pygame.K_LEFT]:
-            s.car.turn(2.5)
+            s.car.turn(20)
         if keys[pygame.K_RIGHT]:
-            s.car.turn(-2.5)
+            s.car.turn(-20)
         if keys[pygame.K_UP]:
-            s.car.throttle(1.5)
+            s.car.throttle(1)
         if keys[pygame.K_DOWN]:
-            s.car.throttle(-1.5)
+            s.car.throttle(-1)
         s.car.update()
 
 if __name__ == "__main__":
