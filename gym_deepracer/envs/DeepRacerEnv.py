@@ -21,7 +21,6 @@ from gym_deepracer.envs.Car import Car
 
 path = os.path.dirname(os.path.abspath(__file__))
 
-# os.environ['DISPLAY'] = ':0.0'
 np.random.seed(int(time.time()))
 def main():
     env = DeepRacerEnv()
@@ -34,8 +33,8 @@ class DeepRacerEnv(gym.Env):
     def __init__(s, width=1000, height=600):
         super().__init__()
         s.random = False
-        s._fps = 25
-        s.default_car = Car(187,531-453, fps=s._fps, view_angle=-65)
+        s._fps = 20
+        s.default_car = Car(187,531-463, fps=s._fps, view_angle=-65)
 
         #get track shape
         pts_arr = np.load(os.path.join(path,"track_points.npy"))
@@ -118,7 +117,7 @@ class DeepRacerEnv(gym.Env):
         #initialize display camera
         init_dir = np.rad2deg(s.car.direction)
         s.display.rotate_x(s.car.view_angle)
-        s.display.translate(0,-0.05*height)
+        s.display.translate(0,-30)
         s.display.rotate_z_abs(init_dir) #point the camera forward
         s.display.draw()
 
@@ -134,6 +133,7 @@ class DeepRacerEnv(gym.Env):
     def step(s, action):
         """Apply action, return new state, reward, done, empty info dict"""
         throttle, turn = action
+        if np.random.random() < 1/1000: print(f"throtle: {throttle}\tturn: {turn}")
         s.move_car(throttle, turn)
         is_display_alive = s.draw()
         s.camera_view = s.display.read_screen()
@@ -167,7 +167,7 @@ class DeepRacerEnv(gym.Env):
         s.time = 0
         if s.random:
             s.car = s.random_car()
-            s.randomize_track()
+            #s.randomize_track()
         else:
             s.car = copy(s.default_car)
         if hasattr(s, 'prev_track_point'):
@@ -193,14 +193,14 @@ class DeepRacerEnv(gym.Env):
         for _ in range(1000):
             pygame.time.delay(0)
             count += 1
-            s.move_car(throttle=1,turn=3)
+            s.move_car(throttle=1,turn=20)
             run = s.draw()
             if not run: break
-            img = s.display.read_screen()
-            if np.random.random() < 0.01:
-                print(img.shape)
-                plt.imshow(img)
-                plt.show()
+#             img = s.display.read_screen()
+#             if np.random.random() < 0.01:
+#                 print(img.shape)
+#                 plt.imshow(img)
+#                 plt.show()
 
             if ((count+1)%100==0):
                 print(f"frameRate: {100/(time.clock() - start)}")
@@ -216,7 +216,7 @@ class DeepRacerEnv(gym.Env):
 #         while run:
         for _ in range(800):
             v.append(s.car.v)
-            pygame.time.delay(20)
+            pygame.time.delay(1000//s._fps-5)
             count += 1
             s.move_car_with_keys()
             run = s.draw()
@@ -258,8 +258,6 @@ class DeepRacerEnv(gym.Env):
 
     def move_car(s, throttle, turn):
         """RL mode to move car."""
-        assert abs(throttle) < 20 #arbitrary
-        assert abs(turn) < 15  #arbitrary
         s.car.throttle(throttle)
         s.car.turn(turn)
         s.car.update()
@@ -273,9 +271,9 @@ class DeepRacerEnv(gym.Env):
         if keys[pygame.K_RIGHT]:
             s.car.turn(-20)
         if keys[pygame.K_UP]:
-            s.car.throttle(1)
+            s.car.throttle(5)
         if keys[pygame.K_DOWN]:
-            s.car.throttle(-1)
+            s.car.throttle(-5)
         s.car.update()
 
 if __name__ == "__main__":
