@@ -18,7 +18,7 @@ import gym_deepracer
 import time
 
 env = gym.make('deepracer-v0')   # starts as 1000x600
-env.resize(128,128,random=False) # resize to 128x128 for learning
+env.resize(128,128) # resize to 128x128 for learning
 
 camera_view = env.reset()
 for _ in range(1000):
