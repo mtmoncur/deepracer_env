@@ -20,8 +20,8 @@ class Car:
         # constants
         s.delta_t = 1/fps # s
         s.m_to_px = 800/7 # px/m  (800px = 7m)
-        s.max_v = 3 # m/s (2m/s ~ 4.5 mph)
-        s.max_a = 2 #0.7 # m/s^2
+        s.max_v = 1.5 # m/s (2m/s ~ 4.5 mph)
+        s.max_a = 5 # m/s^2
         s.drag_coef = s.max_a/(s.max_v**2) # 1/m (drag that enforces max_v)
         s.min_drag = 0.4 # m/s^2
         s._length = 0.25 # m
@@ -66,7 +66,10 @@ class Car:
             r = s._length/np.sin(s.turn_angle)
             tau = s.v*s.delta_t/r
             rel_dx = r*(np.sin(tau+s.turn_angle)) - s._length
-            rel_dy = r*(np.cos(tau+s.turn_angle) - np.cos(s.turn_angle))
+            rel_dy = -r*(np.cos(tau+s.turn_angle) - np.cos(s.turn_angle))
+#             r_in = r*np.cos(s.turn_angle)
+#             rel_dx = r_in*np.sin(tau)
+#             rel_dy = r_in*(np.cos(tau) - 1)
 
             # rotate
             s.dx = rel_dx*np.cos(s.direction) - rel_dy*np.sin(s.direction)

@@ -33,7 +33,7 @@ class DeepRacerEnv(gym.Env):
     def __init__(s, width=1000, height=600):
         super().__init__()
         s.random = False
-        s._fps = 20
+        s._fps = 30
         s.default_car = Car(187,531-463, fps=s._fps, view_angle=-65)
 
         #get track shape
@@ -117,7 +117,7 @@ class DeepRacerEnv(gym.Env):
         #initialize display camera
         init_dir = np.rad2deg(s.car.direction)
         s.display.rotate_x(s.car.view_angle)
-        s.display.translate(0,-30)
+        #s.display.translate(0,-30)
         s.display.rotate_z_abs(init_dir) #point the camera forward
         s.display.draw()
 
@@ -133,7 +133,7 @@ class DeepRacerEnv(gym.Env):
     def step(s, action):
         """Apply action, return new state, reward, done, empty info dict"""
         throttle, turn = action
-        if np.random.random() < 1/1000: print(f"throtle: {throttle}\tturn: {turn}")
+        prev_dist = s.distance_to_centerline()
         s.move_car(throttle, turn)
         is_display_alive = s.draw()
         s.camera_view = s.display.read_screen()
@@ -155,7 +155,8 @@ class DeepRacerEnv(gym.Env):
         s.prev_track_point = cur_track_point
 
         # finalize other values
-#         reward = delta_track_dist/s.car.max_v
+        #reward = delta_track_dist/s.car.max_v
+        #reward = (abs(prev_dist) - abs(s.distance_to_centerline()))/70
         reward = 1.0 if s.is_on_track() else 0.0
         state = [s.camera_view.astype(np.float32)/255, np.array([s.time/100])] # true system includes camera, gyroscope,and accelerometer
         done = ((not is_display_alive) or (abs(s.distance_to_centerline()) > 80)) #implement your own logic on when to be done
@@ -214,7 +215,7 @@ class DeepRacerEnv(gym.Env):
         start = time.clock()
         v = []
 #         while run:
-        for _ in range(800):
+        for _ in range(400):
             v.append(s.car.v)
             pygame.time.delay(1000//s._fps-5)
             count += 1
@@ -267,9 +268,9 @@ class DeepRacerEnv(gym.Env):
         keys = pygame.key.get_pressed()
 
         if keys[pygame.K_LEFT]:
-            s.car.turn(20)
+            s.car.turn(16)
         if keys[pygame.K_RIGHT]:
-            s.car.turn(-20)
+            s.car.turn(-16)
         if keys[pygame.K_UP]:
             s.car.throttle(5)
         if keys[pygame.K_DOWN]:
