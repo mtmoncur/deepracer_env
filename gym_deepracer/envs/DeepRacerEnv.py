@@ -33,9 +33,9 @@ class DeepRacerEnv(gym.Env):
     
     def __init__(s, width=1000, height=600):
         super().__init__()
-        s.random = False
         s._fps = 30
         s.default_car = Car(187,531-463, fps=s._fps, view_angle=-65)
+        s.car = copy(s.default_car)
 
         #get track shape
         pts_arr = np.load(os.path.join(path,"track_points.npy"))
@@ -52,7 +52,31 @@ class DeepRacerEnv(gym.Env):
         s.driving_dist = 0  # true driving distance
         s.track_dist = 0    # only incremented while on track
 
-    def random_car(s):
+        s.random_settings = {
+            'car_bias':False,
+            'car_rand':False,
+            'car_rand_loc':True,
+            'disp_bias':False,
+            'disp_rand':False,
+            'track_fixed_noise':True,
+            'track_rand_noise':False,
+            'track_rand_color':False,
+            'track_rand_light':False
+        }
+
+    def update_random_settings(s, new_settings):
+        prev_len = len(s.random_settings)
+        s.random_settings.update(new_settings)
+        assert len(s.random_settings) == prev_len, "Unknown key in random_settings dictionary."
+        for k,v in s.random_settings.items():
+            if k.startswith('car_'):
+                s.car.random_settings[k] = v
+            elif k.startswith('disp_'):
+                s.display.random_settings[k] = v
+        s.car.update_random_settings()
+        s.display.update_random_settings()
+
+    def random_car_loc(s):
         while True:
             x = np.random.uniform(0,s.display.width)
             y = np.random.uniform(0,s.display.height)
@@ -81,39 +105,33 @@ class DeepRacerEnv(gym.Env):
                 return new_colors
 
     def randomize_track(s):
+        # Case: do nothing
+        if np.random.rand() < 0.0: return None
         norm = np.linalg.norm
-        if np.random.rand() < 0.1:
+        img_r = s.track_img.copy()
+        if s.random_settings['track_rand_color'] and np.random.rand() < 0.5:
+            # 50% chance of new color scheme, 50% chance of original color scheme
             colors = np.array([[49,169,141],[47,61,69],[255,255,255],[238, 163,  85]])
-            img_r = s.track_img.copy()
             new_colors = s.random_colors(4)
             img_r[norm(s.track_img.astype(np.float32) - colors[0], axis=2) < 80] = new_colors[0]
-            img_r[norm(s.track_img.astype(np.float32) - colors[1], axis=2) < 80] = new_colors[1]
+            img_r[norm(s.track_img.astype(np.float32) - colors[1], axis=2) < 80] = new_colors[1]/3 #make track dark
             img_r[norm(s.track_img.astype(np.float32) - colors[2], axis=2) < 80] = new_colors[2]
             img_r[norm(s.track_img.astype(np.float32) - colors[3], axis=2) < 80] = new_colors[3]
 
-            new_track_img = (255*skimage.util.random_noise(img_r, mode='poisson')).astype(np.uint8)
-            s.display.new_track(new_track_img)
-        elif np.random.rand() < 0.2:
-            s.display.new_track(s.track_img)
-        else:
-            pass
+        if s.random_settings['track_fixed_noise']:
+            img_r = (255*skimage.util.random_noise(img_r, mode='poisson')).astype(np.uint8)
+        if s.random_settings['track_rand_light']:
+            brightness = np.random.beta(5, 1)
+            img_r = (brightness*img_r).astype(np.uint8)
+        s.display.new_track(img_r)
+        return None
 
-    def set_random(s, mode):
-        s.random = mode
-
-    def resize(s, width, height, img=None):
+    def resize(s, width, height):
         if hasattr(s, 'win'): s.quit()
         pygame.init()
         s.win = pygame.display.set_mode((width, height), DOUBLEBUF|OPENGL)
         pygame.display.set_caption("Deep Racer")
-        if img is not None:
-            s.display = Display(fr_height=height, fr_width=width, img=img)
-        else:
-            s.display = Display(fr_height=height, fr_width=width, img=s.track_img)
-        if s.random:
-            s.car = s.random_car()
-        else:
-            s.car = copy(s.default_car)
+        s.display = Display(fr_height=height, fr_width=width, img=s.track_img)
 
         #initialize display camera
         init_dir = np.rad2deg(s.car.direction)
@@ -167,11 +185,11 @@ class DeepRacerEnv(gym.Env):
     def reset(s):
         """Set everything back and return observation."""
         s.time = 0
-        if s.random:
-            s.car = s.random_car()
-            #s.randomize_track()
+        if s.random_settings['car_rand_loc']:
+            s.car = s.random_car_loc()
         else:
             s.car = copy(s.default_car)
+        s.randomize_track()
         if hasattr(s, 'prev_track_point'):
             delattr(s, 'prev_track_point')
         is_display_alive = s.draw()

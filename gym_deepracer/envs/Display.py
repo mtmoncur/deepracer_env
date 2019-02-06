@@ -39,7 +39,7 @@ class Display:
 
         #initial adjustments
         s.translate(0,0,-s.height/10) #lift the camera slightly
-
+        s.random_settings = {}
         if biased:
             s.deg_bias = np.random.uniform(-1/5,1/5) # degrees
             s.x_bias = np.random.uniform(-1,1) #track pixels
@@ -72,8 +72,8 @@ class Display:
 
     def new_track(s, numpy_img):
         surface_img = pygame.surfarray.make_surface(np.swapaxes(numpy_img,0,True))
-        textureData = pygame.image.tostring(surface_img, "RGB", 1)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, s.width, s.height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData)
+        s.textureData = pygame.image.tostring(surface_img, "RGB", 1)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, s.width, s.height, 0, GL_RGB, GL_UNSIGNED_BYTE, s.textureData)
 
     def place_track(s):
         #project the image onto 3d space
@@ -137,6 +137,9 @@ class Display:
         data = np.empty(width*height*3, dtype=np.uint8)
         glReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, data)
         return data.reshape(height, width, 3)[::-1].copy()
+
+    def update_random_settings(s):
+        pass
 
 if __name__ == "__main__":
     width, height = 1000,600
