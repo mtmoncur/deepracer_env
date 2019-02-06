@@ -1,2 +1,1 @@
-
-from gym_deepracer.envs.DeepRacerEnv import DeepRacerEnv
+from gym_deepracer.envs.DeepRacerEnv import DeepRacerEnv, DeepRacerEnvDiscrete

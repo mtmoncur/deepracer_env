@@ -11,6 +11,7 @@ from shapely.ops import nearest_points
 from imageio import imread
 import skimage
 import gym
+from gym import spaces
 
 from pygame.locals import *
 from OpenGL.GL import *
@@ -117,7 +118,6 @@ class DeepRacerEnv(gym.Env):
         #initialize display camera
         init_dir = np.rad2deg(s.car.direction)
         s.display.rotate_x(s.car.view_angle)
-        #s.display.translate(0,-30)
         s.display.rotate_z_abs(init_dir) #point the camera forward
         s.display.draw()
 
@@ -147,9 +147,10 @@ class DeepRacerEnv(gym.Env):
         cur_track_point = nearest_points(s.track_center, cur_point)[0]
         delta_track_dist = 0.0
         if s.is_on_track():
-            angle = s.get_angle(cur_track_point.x, cur_track_point.y,
-                                s.prev_track_point.x, s.prev_track_point.y)
-            if (True):#angle > 0):
+            #angle = s.get_angle(cur_track_point.x, cur_track_point.y,
+            #                    s.prev_track_point.x, s.prev_track_point.y)
+            #if(angle > 0): # prevent reward for backwards movement
+            if (True):
                 delta_track_dist = cur_track_point.distance(s.prev_track_point)
                 s.track_dist += delta_track_dist
         s.prev_track_point = cur_track_point
@@ -197,11 +198,6 @@ class DeepRacerEnv(gym.Env):
             s.move_car(throttle=1,turn=20)
             run = s.draw()
             if not run: break
-#             img = s.display.read_screen()
-#             if np.random.random() < 0.01:
-#                 print(img.shape)
-#                 plt.imshow(img)
-#                 plt.show()
 
             if ((count+1)%100==0):
                 print(f"frameRate: {100/(time.clock() - start)}")
@@ -276,6 +272,35 @@ class DeepRacerEnv(gym.Env):
         if keys[pygame.K_DOWN]:
             s.car.throttle(-5)
         s.car.update()
+
+class DeepRacerEnvDiscrete(DeepRacerEnv):
+    metadata = {'render.modes':['human']}
+    def __init__(self, width=1000, height=600):
+        super().__init__()
+
+        self.action_space = spaces.Discrete(6)
+        self.turn_options = {
+            0: 20,
+            1: 13,
+            2: 5,
+            3: 0,
+            4: -5,
+            5: -13,
+            6: -20}
+
+        self.throttle = 5
+
+    def step(self, action):
+        """
+        Apply action, return new state, reward, done, empty info dict
+        Parameters:
+            action (int 0-6) - the integer of the action to take
+
+        """
+        assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
+
+        turn = self.turn_options[action]
+        return super().step((self.throttle, turn))
 
 if __name__ == "__main__":
     main()

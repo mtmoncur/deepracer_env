@@ -26,6 +26,6 @@ for _ in range(1000):
     turn = 15    # turn wheels 15 degrees
     action = (throttle, turn)
     sensors, reward, done, _ = env.step(action)
-    time.sleep(1/25) # run at 25fps
+    time.sleep(1/30) # run at 30fps
 env.quit()
 ```
