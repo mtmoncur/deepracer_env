@@ -3,7 +3,6 @@ from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
 import numpy as np
-import matplotlib.pyplot as plt
 
 def _rand(val, bias, std_dev):
     return np.random.normal(val+bias, std_dev)
