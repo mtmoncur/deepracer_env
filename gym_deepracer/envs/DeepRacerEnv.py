@@ -30,10 +30,10 @@ def main():
 
 class DeepRacerEnv(gym.Env):
     metadata = {'render.modes':['human']}
-    
+
     def __init__(s, width=1000, height=600):
         super().__init__()
-        s._fps = 30
+        s._fps = 10
         s.default_car = Car(187,531-463, fps=s._fps, view_angle=-65)
         s.car = copy(s.default_car)
 
@@ -65,6 +65,32 @@ class DeepRacerEnv(gym.Env):
         }
 
     def update_random_settings(s, new_settings):
+        """To make an agent trained in the virtual environments
+        capable of handling real scenarios, we add randomness.
+
+        Parameters
+        ----------
+            new_settings : dict
+                Dictionary to update the random settings. Must only contain
+                keys of predifined settings.
+
+        Possible settings:
+            car_bias - add permanent to car inputs for entire rollout
+            car_rand - add random noise to car inputs for each step
+            car_rand_loc - start the car at a random location on the track
+            disp_bias - not implemented
+            disp_rand - not implemented
+            track_fixed_noise - add poisson noise to track colors for each rollout
+            track_rand_color - randomize color scheme of track for each rollout
+            track_rand_light - randomize track brightness for each rollout
+
+        Examples
+        --------
+        >>> import gym
+        >>> import gym_deepracer
+        >>> env = gym.make('deepracer-v0')
+        >>> env.update_random_settings({'car_rand_loc':False})
+        """
         prev_len = len(s.random_settings)
         s.random_settings.update(new_settings)
         assert len(s.random_settings) == prev_len, "Unknown key in random_settings dictionary."
