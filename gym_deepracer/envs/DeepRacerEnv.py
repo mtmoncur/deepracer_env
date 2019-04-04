@@ -105,8 +105,7 @@ class DeepRacerEnv(gym.Env):
                 return new_colors
 
     def randomize_track(s):
-        # Case: do nothing
-        if np.random.rand() < 0.0: return None
+        if np.random.rand() < 0.1: return
         norm = np.linalg.norm
         img_r = s.track_img.copy()
         if s.random_settings['track_rand_color'] and np.random.rand() < 0.5:
@@ -124,7 +123,6 @@ class DeepRacerEnv(gym.Env):
             brightness = np.random.beta(5, 1)
             img_r = (brightness*img_r).astype(np.uint8)
         s.display.new_track(img_r)
-        return None
 
     def resize(s, width, height):
         if hasattr(s, 'win'): s.quit()
@@ -282,9 +280,9 @@ class DeepRacerEnv(gym.Env):
         keys = pygame.key.get_pressed()
 
         if keys[pygame.K_LEFT]:
-            s.car.turn(16)
+            s.car.turn(20)
         if keys[pygame.K_RIGHT]:
-            s.car.turn(-16)
+            s.car.turn(-20)
         if keys[pygame.K_UP]:
             s.car.throttle(5)
         if keys[pygame.K_DOWN]:
@@ -296,15 +294,17 @@ class DeepRacerEnvDiscrete(DeepRacerEnv):
     def __init__(self, width=1000, height=600):
         super().__init__()
 
-        self.action_space = spaces.Discrete(6)
+        self.action_space = spaces.Discrete(9)
         self.turn_options = {
             0: 20,
-            1: 13,
-            2: 5,
-            3: 0,
-            4: -5,
-            5: -13,
-            6: -20}
+            1: 15,
+            2: 10,
+            3: 5,
+            4: 0,
+            5: -5,
+            6: -10,
+            7: -15,
+            8: -20}
 
         self.throttle = 5
 

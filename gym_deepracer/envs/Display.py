@@ -139,7 +139,7 @@ class Display:
         return data.reshape(height, width, 3)[::-1].copy()
 
     def update_random_settings(s):
-        pass
+        print("Display: random settings not implemented")
 
 if __name__ == "__main__":
     width, height = 1000,600
