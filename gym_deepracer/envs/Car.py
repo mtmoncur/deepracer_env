@@ -16,11 +16,12 @@ class Car:
         s.dx = 0 # px
         s.dy = 0 # px
         s.throttle_set = False
+        s.path = np.array([[x,y]]*6, dtype=np.float32)  # contains 4 previous points
 
         # constants
         s.delta_t = 1/fps # s
         s.m_to_px = 800/7 # px/m  (800px = 7m)
-        s.max_v = 1.5 # m/s (2m/s ~ 4.5 mph)
+        s.max_v = 2.0 # m/s (2m/s ~ 4.5 mph)
         s.max_a = 5 # m/s^2
         s.drag_coef = s.max_a/(s.max_v**2) # 1/m (drag that enforces max_v)
         s.min_drag = 0.4 # m/s^2
@@ -90,6 +91,19 @@ class Car:
         # reset action values
         s.turn_angle = 0
         s.throttle_set = False
+
+        # update path
+        s.path = np.roll(s.path, 1)
+        s.path[0] = np.array([s.x,s.y])
+
+    def get_acceleration(s):
+        f = s.path
+        h = s.delta_t
+        a = (-7*f[5]+208*f[2]-330*f[1]+112*f[0]+17*f[3])/(240*1.0*h**2)
+        return a
+
+    def get_gyro(self):
+        pass
 
 def _rand(val, bias, std_dev):
     return np.random.normal(val + bias, std_dev)

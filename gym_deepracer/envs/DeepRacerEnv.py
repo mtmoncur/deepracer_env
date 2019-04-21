@@ -5,7 +5,6 @@ from itertools import combinations
 
 import pygame
 import numpy as np
-import matplotlib.pyplot as plt
 from shapely.geometry import Polygon,LinearRing,Point
 from shapely.ops import nearest_points
 from imageio import imread
@@ -198,13 +197,17 @@ class DeepRacerEnv(gym.Env):
         s.prev_track_point = cur_track_point
 
         # finalize other values
-        #reward = delta_track_dist/s.car.max_v
-        #reward = (abs(prev_dist) - abs(s.distance_to_centerline()))/70
         reward = 1.0 if s.is_on_track() else 0.0
-        state = [s.camera_view.astype(np.float32)/255, np.array([s.time/100])] # true system includes camera, gyroscope,and accelerometer
+        state = s.get_state()
         done = ((not is_display_alive) or (abs(s.distance_to_centerline()) > 80)) #implement your own logic on when to be done
 
         return state, reward, done, {}
+
+    def get_state(s):
+        image = s.camera_view.astype(np.float32)/255
+        env_state = np.array([s.time/100, s.car.v], dtype=np.float32) # include variables only known to the environment
+        other_state = np.zeros(1, dtype=np.float32) # should include gyroscope and accelerometer here
+        return image, env_state, other_state
 
     def reset(s):
         """Set everything back and return observation."""
@@ -218,9 +221,7 @@ class DeepRacerEnv(gym.Env):
             delattr(s, 'prev_track_point')
         is_display_alive = s.draw()
         s.camera_view = s.display.read_screen()
-        state = [s.camera_view.astype(np.float32)/255, np.array([s.time/100])]
-
-        return state
+        return s.get_state()
 
     def render(s, mode='human', close=False):
         """Generate image for display. Return the viewer."""
@@ -251,22 +252,16 @@ class DeepRacerEnv(gym.Env):
         run = True
         count = 0
         start = time.clock()
-        v = []
-#         while run:
         for _ in range(400):
-            v.append(s.car.v)
-            pygame.time.delay(1000//s._fps-5)
+            pygame.time.delay(1000//s._fps-2)
             count += 1
             s.move_car_with_keys()
             run = s.draw()
 
-            if ((count+1)%100==0):
-                if s.is_on_track(): print("===On track===")
-                print(f"frameRate: {100/(time.clock() - start)}")
+            if ((count+1)%20==0):
+                print(f"frameRate: {20/(time.clock() - start)}")
                 start = time.clock()
         s.quit()
-        plt.plot(v)
-        plt.show()
 
     def quit(s):
         pygame.quit()
