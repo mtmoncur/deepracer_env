@@ -27,7 +27,7 @@ def multinomial_likelihood(dist, idx):
     return dist[range(dist.shape[0]), idx.long()[:, 0]].unsqueeze(1)
 
 def ppo(environment, policy, value, embedding_net, epochs=100,
-        frames_per_epoch=2000, max_episode_length=200, gamma=0.99, policy_epochs=5, batch_size=64, epsilon=0.2,
+        frames_per_epoch=2000, max_episode_length=200, gamma=0.99, policy_epochs=3, batch_size=64, epsilon=0.2,
         environment_threads=1, data_loader_threads=1, device=torch.device('cpu'), lr=1e-3, betas=(0.9, 0.999),
         weight_decay=0.01, gif_name='', gif_epochs=0, model_name='project', csv_file='latest_run.csv'):
     # Set up experiment details
@@ -182,7 +182,7 @@ def _prepare_numpy(ndarray, device):
     return torch.from_numpy(ndarray).float().unsqueeze(0).to(device)
 
 def _prepare_tensor_batch(tensor, device):
-    return tensor.detach().float().cuda(async=True)
+    return tensor.detach().float().to(device)
 
 def _make_gif(rollout, filename):
     with imageio.get_writer(filename, mode='I', duration=1 / 7) as writer:

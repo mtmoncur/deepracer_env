@@ -14,7 +14,6 @@ import gym_deepracer
 from ppo import MLP, Actor, ConvNetwork, ppo
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-print(abs_path)
 models_dir = os.path.join(abs_path, 'models')
 
 def get_env():
@@ -102,8 +101,10 @@ class ModelBuilder:
                 print("New model cloned from {}.".format(clone_from))
 
         display(Markdown("## Choose Hyperparameters/Train Model"))
-        @widgets.interact_manual
-        def run():
+        @widgets.interact_manual(frames_per_epoch=(400,4000),
+                                epochs=(1,100),
+                                batch_size=[32,64,128,256])
+        def run(frames_per_epoch=1000, epochs=30, batch_size=64):
             if not self._model_built:
                 print("Must build the model first.")
                 return
@@ -119,7 +120,8 @@ class ModelBuilder:
                 t.start()
 
                 args = (self._env, self._policy, self._value, self._conv_net)
-                kwargs = {'epochs':50, 'frames_per_epoch':2000, 'device':device, 'gif_epochs':1,
+                kwargs = {'epochs':epochs, 'frames_per_epoch':frames_per_epoch,
+                          'device':device, 'gif_epochs':1,'batch_size':batch_size,
                           'model_name':self._model_name}
                 ppo(*args, **kwargs)
 
@@ -180,13 +182,3 @@ def _next_url(base_url, i):
     i -= 1
     url = base_url.format(i)
     return url, i
-
-def test_widgets():
-    @widgets.interact_manual(freq=(0.,4.),
-        color=['blue', 'red', 'green'], lw=(1., 10.))
-    def plot(freq=1., color='blue', lw=2, grid=True):
-        t = np.linspace(-1., +1., 1000)
-        fig, ax = plt.subplots(1, 1, figsize=(8, 6))
-        ax.plot(t, np.sin(2 * np.pi * freq * t),
-                lw=lw, color=color)
-        ax.grid(grid)
