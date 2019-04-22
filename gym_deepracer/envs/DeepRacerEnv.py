@@ -1,5 +1,6 @@
 import os
 import time
+import math
 from copy import copy
 from itertools import combinations
 
@@ -40,7 +41,8 @@ class DeepRacerEnv(gym.Env):
         pts_arr = np.load(os.path.join(path,"track_points.npy"))
         s.track_center = LinearRing(pts_arr)
         s.track_cut = Polygon(pts_arr)
-        s.track_shape = s.track_center.buffer(39) # track is about 39 pixels wide
+        s.track_width = 39
+        s.track_shape = s.track_center.buffer(s.track_width)
 
         # create display
         s.track_img = imread(os.path.join(path,"aws-track2.png"))
@@ -50,6 +52,13 @@ class DeepRacerEnv(gym.Env):
         s.time = 0          # time measured in frames
         s.driving_dist = 0  # true driving distance
         s.track_dist = 0    # only incremented while on track
+
+        def base_reward(params):
+            if params['all_wheels_on_track']:
+                return 1.0
+            else:
+                return 0.0
+        s._reward_func = base_reward
 
         s.random_settings = {
             'car_bias':False,
@@ -62,6 +71,113 @@ class DeepRacerEnv(gym.Env):
             'track_rand_color':False,
             'track_rand_light':False
         }
+
+    def update_reward_func(s, reward_func):
+        s._reward_func = reward_func
+
+    def resize(s, width, height):
+        if hasattr(s, 'win'): s.quit()
+        pygame.init()
+        s.win = pygame.display.set_mode((width, height), DOUBLEBUF|OPENGL)
+        pygame.display.set_caption("Deep Racer")
+        s.display = Display(fr_height=height, fr_width=width, img=s.track_img)
+
+        #initialize display camera
+        init_dir = np.rad2deg(s.car.direction)
+        s.display.rotate_x(s.car.view_angle)
+        s.display.rotate_z_abs(init_dir) #point the camera forward
+        s.display.draw()
+
+        s.time = 0
+
+    def step(s, action):
+        """Apply action, return new state, reward, done, empty info dict"""
+        s.throttle, s.steering_angle = action
+        prev_dist = s.get_distance_to_center()
+        s.move_car(s.throttle, s.steering_angle)
+        is_display_alive = s.draw()
+        s.camera_view = s.display.read_screen()
+
+        # increment measurements
+        s.time += 1
+        s.driving_dist += np.sqrt(s.car.dx**2+s.car.dy**2)
+        cur_point = Point(s.car.x, s.car.y)
+        if not hasattr(s, 'prev_track_point'):
+            s.prev_track_point = nearest_points(s.track_center, Point(s.car.x, s.car.y))[0]
+        cur_track_point = nearest_points(s.track_center, cur_point)[0]
+        delta_track_dist = 0.0
+        if s.is_on_track():
+            delta_track_dist = cur_track_point.distance(s.prev_track_point)
+            s.track_dist += delta_track_dist
+        s.prev_track_point = cur_track_point
+
+        params = s.get_params()
+        reward = s._reward_func(params)
+        state = s.get_state()
+        done = ((not is_display_alive) or (abs(s.get_distance_to_center()) > 80))
+
+        return state, reward, done, {}
+
+    def render(s, mode='human', close=False):
+        """Generate image for display. Return the viewer."""
+        if (mode=='rgb_array') and hasattr(s, 'camera_view'):
+            return s.camera_view
+        else:
+            return None
+
+    def reset(s):
+        """Set everything back and return observation."""
+        s.time = 0
+        if s.random_settings['car_rand_loc']:
+            s.car = s.random_car_loc()
+        else:
+            s.car = copy(s.default_car)
+        s.randomize_track()
+        if hasattr(s, 'prev_track_point'):
+            delattr(s, 'prev_track_point')
+        is_display_alive = s.draw()
+        s.camera_view = s.display.read_screen()
+        return s.get_state()
+
+    def get_params(s):
+        params = {}
+        params['all_wheels_on_track'] = s.is_on_track()
+        params['x'] = s.car.x/s.car.m_to_px
+        params['y'] = s.car.y/s.car.m_to_px
+        params['distance_from_center'] = abs(s.get_distance_to_center())/s.car.m_to_px
+        params['is_left_of_center'] = (s.get_distance_to_center() < 0)
+        params['heading'] = math.degrees(s.car.direction)%360
+        params['progress'] = s.get_progress()
+        params['steps'] = s.time
+        params['speed'] = s.car.v
+        params['steering_angle'] = s.steering_angle
+        params['track_width'] = s.track_width / s.car.m_to_px
+        return params
+
+    def get_progress(s):
+        return 100 * s.track_dist / s.track_center.length
+
+    def get_state(s):
+        image = s.camera_view.astype(np.float32)/255
+        env_state = np.array([s.time/100, s.car.v], dtype=np.float32) # include variables only known to the environment
+        other_state = np.zeros(1, dtype=np.float32) # should include gyroscope and accelerometer here
+        return image, env_state, other_state
+
+    def get_angle(s, x1, y1, x2, y2):
+        center_point_x = 800/2 # random point inside of track
+        center_point_y = 531/2
+        angle1 = np.arctan2(x1-center_point_x, y1-center_point_y)
+        angle2 = np.arctan2(x2-center_point_x, y2-center_point_y)
+        return angle2 - angle1
+
+    def is_on_track(s):
+        pos = Point((s.car.x,s.car.y))
+        return s.track_shape.contains(pos)
+
+    def get_distance_to_center(s):
+        pos = Point((s.car.x,s.car.y))
+        sign = -1 if s.track_cut.contains(pos) else 1
+        return sign*s.track_center.distance(pos)
 
     def update_random_settings(s, new_settings):
         """To make an agent trained in the virtual environments
@@ -149,87 +265,6 @@ class DeepRacerEnv(gym.Env):
             img_r = (brightness*img_r).astype(np.uint8)
         s.display.new_track(img_r)
 
-    def resize(s, width, height):
-        if hasattr(s, 'win'): s.quit()
-        pygame.init()
-        s.win = pygame.display.set_mode((width, height), DOUBLEBUF|OPENGL)
-        pygame.display.set_caption("Deep Racer")
-        s.display = Display(fr_height=height, fr_width=width, img=s.track_img)
-
-        #initialize display camera
-        init_dir = np.rad2deg(s.car.direction)
-        s.display.rotate_x(s.car.view_angle)
-        s.display.rotate_z_abs(init_dir) #point the camera forward
-        s.display.draw()
-
-        s.time = 0
-
-    def get_angle(s, x1, y1, x2, y2):
-        center_point_x = 800/2 # random point insided of track
-        center_point_y = 531/2
-        angle1 = np.arctan2(x1-center_point_x, y1-center_point_y)
-        angle2 = np.arctan2(x2-center_point_x, y2-center_point_y)
-        return angle2 - angle1
-
-    def step(s, action):
-        """Apply action, return new state, reward, done, empty info dict"""
-        throttle, turn = action
-        prev_dist = s.distance_to_centerline()
-        s.move_car(throttle, turn)
-        is_display_alive = s.draw()
-        s.camera_view = s.display.read_screen()
-
-        # increment measurements
-        s.time += 1
-        s.driving_dist += np.sqrt(s.car.dx**2+s.car.dy**2)
-        cur_point = Point(s.car.x, s.car.y)
-        if not hasattr(s, 'prev_track_point'):
-            s.prev_track_point = nearest_points(s.track_center, Point(s.car.x, s.car.y))[0]
-        cur_track_point = nearest_points(s.track_center, cur_point)[0]
-        delta_track_dist = 0.0
-        if s.is_on_track():
-            #angle = s.get_angle(cur_track_point.x, cur_track_point.y,
-            #                    s.prev_track_point.x, s.prev_track_point.y)
-            #if(angle > 0): # prevent reward for backwards movement
-            if (True):
-                delta_track_dist = cur_track_point.distance(s.prev_track_point)
-                s.track_dist += delta_track_dist
-        s.prev_track_point = cur_track_point
-
-        # finalize other values
-        reward = 1.0 if s.is_on_track() else 0.0
-        state = s.get_state()
-        done = ((not is_display_alive) or (abs(s.distance_to_centerline()) > 80)) #implement your own logic on when to be done
-
-        return state, reward, done, {}
-
-    def get_state(s):
-        image = s.camera_view.astype(np.float32)/255
-        env_state = np.array([s.time/100, s.car.v], dtype=np.float32) # include variables only known to the environment
-        other_state = np.zeros(1, dtype=np.float32) # should include gyroscope and accelerometer here
-        return image, env_state, other_state
-
-    def reset(s):
-        """Set everything back and return observation."""
-        s.time = 0
-        if s.random_settings['car_rand_loc']:
-            s.car = s.random_car_loc()
-        else:
-            s.car = copy(s.default_car)
-        s.randomize_track()
-        if hasattr(s, 'prev_track_point'):
-            delattr(s, 'prev_track_point')
-        is_display_alive = s.draw()
-        s.camera_view = s.display.read_screen()
-        return s.get_state()
-
-    def render(s, mode='human', close=False):
-        """Generate image for display. Return the viewer."""
-        if (mode=='rgb_array') and hasattr(s, 'camera_view'):
-            return s.camera_view
-        else:
-            return None
-
     def test(s):
         """Quickly run the car in a circle for 1000 steps for testing purposes."""
         run = True
@@ -281,15 +316,6 @@ class DeepRacerEnv(gym.Env):
         s.display.draw()
         return True
 
-    def is_on_track(s):
-        pos = Point((s.car.x,s.car.y))
-        return s.track_shape.contains(pos)
-
-    def distance_to_centerline(s):
-        pos = Point((s.car.x,s.car.y))
-        sign = -1 if s.track_cut.contains(pos) else 1
-        return sign*s.track_center.distance(pos)
-
     def move_car(s, throttle, turn):
         """RL mode to move car."""
         s.car.throttle(throttle)
@@ -312,7 +338,7 @@ class DeepRacerEnv(gym.Env):
 
 class DeepRacerEnvDiscrete(DeepRacerEnv):
     metadata = {'render.modes':['human']}
-    def __init__(self, width=1000, height=600):
+    def __init__(self):
         super().__init__()
 
         self.action_space = spaces.Discrete(9)
@@ -338,8 +364,8 @@ class DeepRacerEnvDiscrete(DeepRacerEnv):
         """
         assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
 
-        turn = self.turn_options[action]
-        return super().step((self.throttle, turn))
+        self.steering_angle = self.turn_options[action]
+        return super().step((self.throttle, self.steering_angle))
 
 if __name__ == "__main__":
     main()

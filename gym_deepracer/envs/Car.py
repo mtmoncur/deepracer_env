@@ -21,7 +21,7 @@ class Car:
         # constants
         s.delta_t = 1/fps # s
         s.m_to_px = 800/7 # px/m  (800px = 7m)
-        s.max_v = 2.0 # m/s (2m/s ~ 4.5 mph)
+        s.max_v = 1.0 # m/s (2m/s ~ 4.5 mph)
         s.max_a = 5 # m/s^2
         s.drag_coef = s.max_a/(s.max_v**2) # 1/m (drag that enforces max_v)
         s.min_drag = 0.4 # m/s^2
