@@ -33,7 +33,7 @@ class DeepRacerEnv(gym.Env):
 
     def __init__(s, width=1000, height=600):
         super().__init__()
-        s._fps = 10
+        s._fps = 15
         s.default_car = Car(187,531-463, fps=s._fps, view_angle=-65)
         s.car = copy(s.default_car)
 
@@ -118,16 +118,20 @@ class DeepRacerEnv(gym.Env):
 
         return state, reward, done, {}
 
-    def render(s, mode='human', close=False):
-        """Generate image for display. Return the viewer."""
-        if (mode=='rgb_array') and hasattr(s, 'camera_view'):
-            return s.camera_view
-        else:
-            return None
+#     def render(s, mode='human', close=False):
+#         """Generate image for display. Return the viewer."""
+#         if (mode=='rgb_array') and hasattr(s, 'camera_view'):
+#             return s.camera_view
+#         else:
+#             return None
 
     def reset(s):
         """Set everything back and return observation."""
         s.time = 0
+        s.driving_dist = 0
+        s.track_dist = 0
+        if hasattr(s,'prev_track_point'):
+            delattr(s,'prev_track_point')
         if s.random_settings['car_rand_loc']:
             s.car = s.random_car_loc()
         else:
