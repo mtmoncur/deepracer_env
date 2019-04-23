@@ -20,7 +20,7 @@ class Car:
 
         # constants
         s.delta_t = 1/fps # s
-        s.m_to_px = 800/7 # px/m  (800px = 7m)
+        s.m_to_px = 800/7.92 # px/m  (800px = 7.92m)
         s.set_max_values(v=1.5, a=5)
         s.min_drag = 0.4 # m/s^2
         s._length = 0.25 # m

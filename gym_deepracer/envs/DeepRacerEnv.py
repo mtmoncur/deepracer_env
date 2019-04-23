@@ -162,9 +162,23 @@ class DeepRacerEnv(gym.Env):
         return 100 * s.track_dist / s.track_center.length
 
     def get_state(s):
+        """
+        Produce the state of the environment.
+        image
+            the current camera view.
+        env_state
+            this is meant to contain environment specific values,
+            like x,y coordinates, speed, distance to center. These
+            values are useful for the value function, but should not
+            be given to the policy
+        other_state
+            this will contain any remaining state values that can be available
+            to the policy and value functions, like accelerometer readings
+        """
         image = s.camera_view.astype(np.float32)/255
-        env_state = np.array([s.time/100, s.car.v], dtype=np.float32) # include variables only known to the environment
-        other_state = np.zeros(1, dtype=np.float32) # should include gyroscope and accelerometer here
+        params = self.get_params()
+        env_state = np.array(list(params.values()) + [s.driving_dist], dtype=np.float32)
+        other_state = np.zeros(1, dtype=np.float32)
         return image, env_state, other_state
 
     def get_angle(s, x1, y1, x2, y2):
